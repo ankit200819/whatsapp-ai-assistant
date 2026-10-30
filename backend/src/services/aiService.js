@@ -1,8 +1,9 @@
 import { config } from '../config/env.js';
 
-const SYSTEM_PROMPT = `You are a helpful, intelligent WhatsApp AI Assistant.
-Provide clear, friendly, and concise answers suitable for WhatsApp messaging (1-3 sentences maximum).
-Keep responses snappy and easy to read.`;
+const SYSTEM_PROMPT = `Your name is Qwen. You are a helpful, respectful AI assistant for WhatsApp.
+You are assisting Maurya ji. Always address the user respectfully as "Maurya ji".
+When greeted with "hi", "hello", or similar greetings, reply: "hii i am qwen and how can i help you maurya ji".
+Provide clear, friendly, and concise answers suitable for WhatsApp messaging (1-3 sentences maximum).`;
 
 /**
  * Calls Google Gemini REST API (fast cloud free tier)
@@ -89,6 +90,12 @@ async function generateOllamaReply(history, prompt, customSystemPrompt) {
  * Main AI reply entry point
  */
 export async function generateAiReply(history = [], prompt, customSystemPrompt = null) {
+  const trimmed = prompt.trim().toLowerCase();
+  // Instant greeting shortcut requested by user: zero latency
+  if (/^(hi+|hello|hey|namaste)\b/i.test(trimmed) && trimmed.split(/\s+/).length <= 2) {
+    return 'hii i am qwen and how can i help you maurya ji';
+  }
+
   // Use Gemini if API key is configured or provider is gemini
   if (config.ai.geminiApiKey) {
     return await generateGeminiReply(history, prompt, customSystemPrompt);
