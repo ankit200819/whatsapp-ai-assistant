@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Qwen | WhatsApp AI Assistant for Maurya ji</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,61 +27,65 @@
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
       font-family: var(--font-main);
       background-color: var(--bg-primary);
       color: var(--text-primary);
-      min-height: 100vh;
+      height: 100vh;
+      height: 100dvh;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
 
     /* Top Navigation Header */
     header {
       background: var(--bg-secondary);
       border-bottom: 1px solid var(--border-color);
-      padding: 12px 24px;
+      padding: 10px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      position: sticky;
-      top: 0;
       z-index: 100;
+      flex-shrink: 0;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     .brand-icon {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       background: linear-gradient(135deg, var(--accent-green), var(--accent-green-bright));
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       box-shadow: 0 4px 12px rgba(0, 168, 132, 0.3);
+      flex-shrink: 0;
     }
 
     .brand-icon svg {
-      width: 22px;
-      height: 22px;
+      width: 20px;
+      height: 20px;
       fill: #fff;
     }
 
     .brand h1 {
-      font-size: 1.15rem;
+      font-size: 1.05rem;
       font-weight: 600;
       letter-spacing: -0.3px;
+      line-height: 1.2;
     }
 
     .brand span {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: var(--text-secondary);
       display: block;
     }
@@ -89,24 +93,25 @@
     .status-bar {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 8px;
     }
 
     .badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
+      gap: 5px;
+      padding: 5px 10px;
       background: var(--bg-panel);
       border: 1px solid var(--border-color);
       border-radius: 20px;
-      font-size: 0.78rem;
+      font-size: 0.74rem;
       font-weight: 500;
+      white-space: nowrap;
     }
 
     .badge-dot {
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       background: #777;
     }
@@ -121,18 +126,49 @@
       box-shadow: 0 0 8px #f59e0b;
     }
 
+    /* Mobile Navigation Tabs (Only visible on screens <= 768px) */
+    .mobile-nav-tabs {
+      display: none;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .mobile-tab-btn {
+      flex: 1;
+      padding: 10px 0;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mobile-tab-btn.active {
+      color: var(--accent-green-bright);
+      border-bottom-color: var(--accent-green-bright);
+      background: rgba(0, 168, 132, 0.08);
+    }
+
     /* Main Container */
     .container {
       display: flex;
       flex: 1;
-      height: calc(100vh - 65px);
       max-width: 1440px;
       width: 100%;
       margin: 0 auto;
       overflow: hidden;
+      position: relative;
     }
 
-    /* Left Sidebar: Controls & WhatsApp Simulator */
+    /* Left Sidebar: Controls & Simulator */
     .sidebar {
       width: 360px;
       background: var(--bg-secondary);
@@ -140,19 +176,20 @@
       display: flex;
       flex-direction: column;
       overflow-y: auto;
+      flex-shrink: 0;
     }
 
     .sidebar-section {
-      padding: 18px 20px;
+      padding: 16px 18px;
       border-bottom: 1px solid var(--border-color);
     }
 
     .sidebar-section h3 {
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       text-transform: uppercase;
       letter-spacing: 0.8px;
       color: var(--text-secondary);
-      margin-bottom: 14px;
+      margin-bottom: 12px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -234,7 +271,7 @@
       color: #fff;
     }
 
-    .btn-primary:hover {
+    .btn-primary:hover, .btn-primary:active {
       background: #008f6f;
     }
 
@@ -244,11 +281,11 @@
       color: var(--text-primary);
     }
 
-    .btn-outline:hover {
+    .btn-outline:hover, .btn-outline:active {
       background: var(--bg-panel);
     }
 
-    /* Right Main Panel: Chat Room */
+    /* Right Main Panel: Live Chat */
     .chat-area {
       flex: 1;
       display: flex;
@@ -256,57 +293,62 @@
       background: #0b141a;
       background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
       background-size: 24px 24px;
+      height: 100%;
+      overflow: hidden;
     }
 
     .chat-header {
-      padding: 14px 24px;
+      padding: 10px 18px;
       background: var(--bg-secondary);
       border-bottom: 1px solid var(--border-color);
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-shrink: 0;
     }
 
     .chat-header-info {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     .avatar {
-      width: 38px;
-      height: 38px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       background: var(--bg-panel);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 600;
+      font-weight: 700;
+      font-size: 0.95rem;
       color: var(--accent-green-bright);
     }
 
     .messages-container {
       flex: 1;
-      padding: 24px;
+      padding: 16px 20px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
+      -webkit-overflow-scrolling: touch;
     }
 
     .message {
-      max-width: 68%;
-      padding: 10px 16px;
+      max-width: 72%;
+      padding: 10px 14px;
       border-radius: 12px;
       font-size: 0.92rem;
       line-height: 1.5;
       position: relative;
       word-break: break-word;
-      animation: fadeIn 0.2s ease-in-out;
+      animation: fadeIn 0.15s ease-in-out;
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
+      from { opacity: 0; transform: translateY(4px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
@@ -323,45 +365,65 @@
       border: 1px solid var(--border-color);
     }
 
+    .message strong {
+      color: #fff;
+    }
+
+    .message code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+    }
+
     .message-meta {
-      font-size: 0.68rem;
+      font-size: 0.65rem;
       color: var(--text-secondary);
       text-align: right;
       margin-top: 4px;
     }
 
     .quick-prompts {
-      padding: 8px 24px;
+      padding: 6px 16px;
       display: flex;
       gap: 8px;
       overflow-x: auto;
+      flex-shrink: 0;
+      scrollbar-width: none;
+    }
+
+    .quick-prompts::-webkit-scrollbar {
+      display: none;
     }
 
     .quick-chip {
       background: var(--bg-secondary);
       border: 1px solid var(--border-color);
-      padding: 6px 14px;
+      padding: 5px 12px;
       border-radius: 16px;
       font-size: 0.78rem;
       color: var(--text-secondary);
       cursor: pointer;
       white-space: nowrap;
       transition: all 0.2s;
+      flex-shrink: 0;
     }
 
-    .quick-chip:hover {
+    .quick-chip:hover, .quick-chip:active {
       border-color: var(--accent-green);
       color: var(--text-primary);
       background: var(--bg-panel);
     }
 
     .input-bar {
-      padding: 14px 24px;
+      padding: 10px 16px;
       background: var(--bg-secondary);
       border-top: 1px solid var(--border-color);
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+      flex-shrink: 0;
     }
 
     .input-bar input {
@@ -369,10 +431,11 @@
       background: var(--bg-panel);
       border: 1px solid var(--border-color);
       border-radius: 24px;
-      padding: 12px 20px;
+      padding: 10px 18px;
       color: var(--text-primary);
       font-size: 0.92rem;
       outline: none;
+      min-width: 0;
     }
 
     .input-bar input:focus {
@@ -380,8 +443,9 @@
     }
 
     .send-btn {
-      width: 44px;
-      height: 44px;
+      width: 42px;
+      height: 42px;
+      min-width: 42px;
       border-radius: 50%;
       background: var(--accent-green);
       border: none;
@@ -392,13 +456,13 @@
       transition: background 0.2s;
     }
 
-    .send-btn:hover {
+    .send-btn:hover, .send-btn:active {
       background: var(--accent-green-bright);
     }
 
     .send-btn svg {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       fill: #fff;
     }
 
@@ -406,10 +470,11 @@
       display: none;
       align-self: flex-start;
       background: var(--bg-bubble-ai);
-      padding: 10px 16px;
+      padding: 8px 14px;
       border-radius: 12px;
       border: 1px solid var(--border-color);
       gap: 4px;
+      margin-bottom: 4px;
     }
 
     .dot {
@@ -426,6 +491,89 @@
     @keyframes bounce {
       0%, 80%, 100% { transform: scale(0); }
       40% { transform: scale(1); }
+    }
+
+    /* ==============================================================
+       MOBILE RESPONSIVENESS (Screens <= 768px - Phones & Small Tablets)
+       ============================================================== */
+    @media (max-width: 768px) {
+      header {
+        padding: 8px 12px;
+        flex-direction: row;
+        justify-content: space-between;
+      }
+
+      .brand h1 {
+        font-size: 0.95rem;
+      }
+
+      .brand span {
+        font-size: 0.65rem;
+      }
+
+      .status-bar .badge:not(:first-child) {
+        display: none; /* Keep header compact on mobile */
+      }
+
+      .mobile-nav-tabs {
+        display: flex;
+      }
+
+      .container {
+        height: auto;
+        flex: 1;
+      }
+
+      .sidebar {
+        width: 100%;
+        display: none;
+        border-right: none;
+        height: 100%;
+      }
+
+      .sidebar.mobile-active {
+        display: flex;
+      }
+
+      .chat-area {
+        display: flex;
+        width: 100%;
+        height: 100%;
+      }
+
+      .chat-area.mobile-hidden {
+        display: none;
+      }
+
+      .message {
+        max-width: 86%; /* Wider bubbles for mobile readability */
+        font-size: 0.88rem;
+        padding: 8px 12px;
+      }
+
+      .messages-container {
+        padding: 12px 14px;
+      }
+
+      .input-bar {
+        padding: 8px 12px;
+        gap: 8px;
+      }
+
+      .input-bar input {
+        padding: 9px 15px;
+        font-size: 0.9rem;
+      }
+
+      .send-btn {
+        width: 38px;
+        height: 38px;
+        min-width: 38px;
+      }
+
+      .quick-prompts {
+        padding: 6px 12px;
+      }
     }
   </style>
 </head>
@@ -444,30 +592,40 @@
     </div>
     <div class="status-bar">
       <div class="badge">
-        <span class="badge-dot" id="db-dot"></span>
-        <span id="db-status">Database: Checking...</span>
+        <span class="badge-dot" id="ai-dot"></span>
+        <span id="ai-status">Connecting...</span>
       </div>
       <div class="badge">
-        <span class="badge-dot" id="ai-dot"></span>
-        <span id="ai-status">Ollama: Connecting...</span>
+        <span class="badge-dot" id="db-dot"></span>
+        <span id="db-status">DB: Checking...</span>
       </div>
       <div class="badge">
         <span class="badge-dot" id="wa-dot"></span>
-        <span id="wa-status">WhatsApp: Mock Mode</span>
+        <span id="wa-status">WhatsApp: Active</span>
       </div>
     </div>
   </header>
 
+  <!-- Mobile Tab Switcher -->
+  <div class="mobile-nav-tabs">
+    <button class="mobile-tab-btn active" id="btn-tab-chat" onclick="switchTab('chat')">
+      💬 Chat
+    </button>
+    <button class="mobile-tab-btn" id="btn-tab-sim" onclick="switchTab('sim')">
+      ⚙️ Webhook Simulator
+    </button>
+  </div>
+
   <div class="container">
     <!-- Left Sidebar: Controls & Simulator -->
-    <div class="sidebar">
+    <div class="sidebar" id="sidebar-panel">
       <div class="sidebar-section">
         <h3>System Diagnostics</h3>
         <div class="info-card">
           <div class="info-row"><span class="info-label">AI Engine:</span><span class="info-value" id="ai-model-tag">llama3.2:1b</span></div>
-          <div class="info-row"><span class="info-label">Endpoint:</span><span class="info-value">localhost:11434</span></div>
+          <div class="info-row"><span class="info-label">Client Mode:</span><span class="info-value" style="color:var(--accent-green-bright);">Mobile & Web Ready</span></div>
           <div class="info-row"><span class="info-label">Cost:</span><span class="info-value" style="color:var(--accent-green-bright);">$0.00 (100% Free)</span></div>
-          <div class="info-row"><span class="info-label">Privacy:</span><span class="info-value">100% Local PC</span></div>
+          <div class="info-row"><span class="info-label">Personalized:</span><span class="info-value">Maurya ji</span></div>
         </div>
         <button class="btn btn-outline" id="clear-btn" onclick="clearHistory()">Clear Chat History</button>
       </div>
@@ -475,7 +633,7 @@
       <div class="sidebar-section">
         <h3>WhatsApp Webhook Simulator</h3>
         <p style="font-size:0.78rem; color:var(--text-secondary); margin-bottom:12px;">
-          Simulate an inbound message from Meta's Cloud API webhook to test the complete end-to-end processing pipeline:
+          Simulate an inbound message from Meta's Cloud API webhook:
         </p>
         <div class="form-group">
           <label>Sender Phone Number</label>
@@ -483,11 +641,11 @@
         </div>
         <div class="form-group">
           <label>Sender Name</label>
-          <input type="text" id="sim-name" value="Test User">
+          <input type="text" id="sim-name" value="Maurya ji">
         </div>
         <div class="form-group">
           <label>Simulated Message</label>
-          <textarea id="sim-msg" rows="3" placeholder="What is binary search?">Explain pointers in C in 2 simple sentences.</textarea>
+          <textarea id="sim-msg" rows="3">hi</textarea>
         </div>
         <button class="btn btn-primary" onclick="simulateWhatsAppWebhook()">
           Send Webhook Event
@@ -497,13 +655,13 @@
     </div>
 
     <!-- Right Main Panel: Live Chat -->
-    <div class="chat-area">
+    <div class="chat-area" id="chat-panel">
       <div class="chat-header">
         <div class="chat-header-info">
           <div class="avatar">Q</div>
           <div>
-            <div style="font-weight:600; font-size:0.95rem;">Qwen</div>
-            <div style="font-size:0.75rem; color:var(--accent-green-bright);">Online &bull; Ready to help Maurya ji</div>
+            <div style="font-weight:600; font-size:0.92rem;">Qwen</div>
+            <div style="font-size:0.72rem; color:var(--accent-green-bright);">Online &bull; Ready to help Maurya ji</div>
           </div>
         </div>
       </div>
@@ -522,15 +680,15 @@
       </div>
 
       <div class="quick-prompts">
-        <div class="quick-chip" onclick="quickSend('hi')">hi</div>
-        <div class="quick-chip" onclick="quickSend('who are you?')">who are you?</div>
-        <div class="quick-chip" onclick="quickSend('Explain arrays in C in simple terms')">Array in C</div>
-        <div class="quick-chip" onclick="quickSend('Write a python function to check if a string is a palindrome')">Python Palindrome</div>
+        <div class="quick-chip" onclick="quickSend('hi')">👋 hi</div>
+        <div class="quick-chip" onclick="quickSend('who are you?')">🤖 who are you?</div>
+        <div class="quick-chip" onclick="quickSend('Explain arrays in C in 1 simple sentence')">💻 Array in C</div>
+        <div class="quick-chip" onclick="quickSend('How does WhatsApp webhook work?')">⚡ Webhook</div>
       </div>
 
       <div class="input-bar">
-        <input type="text" id="message-input" placeholder="Type a message to test your AI assistant..." onkeydown="handleKeyDown(event)">
-        <button class="send-btn" id="send-button" onclick="sendMessage()">
+        <input type="text" id="message-input" placeholder="Message Qwen..." onkeydown="handleKeyDown(event)" autocomplete="off">
+        <button class="send-btn" id="send-button" onclick="sendMessage()" aria-label="Send Message">
           <svg viewBox="0 0 24 24">
             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
           </svg>
@@ -540,6 +698,38 @@
   </div>
 
   <script>
+    // Tab switching for mobile screens
+    function switchTab(tab) {
+      const sidebar = document.getElementById('sidebar-panel');
+      const chat = document.getElementById('chat-panel');
+      const btnChat = document.getElementById('btn-tab-chat');
+      const btnSim = document.getElementById('btn-tab-sim');
+
+      if (tab === 'chat') {
+        sidebar.classList.remove('mobile-active');
+        chat.classList.remove('mobile-hidden');
+        btnChat.classList.add('active');
+        btnSim.classList.remove('active');
+      } else {
+        sidebar.classList.add('mobile-active');
+        chat.classList.add('mobile-hidden');
+        btnChat.classList.remove('active');
+        btnSim.classList.add('active');
+      }
+    }
+
+    // Format basic WhatsApp markdown for clean mobile display
+    function formatWhatsAppMarkdown(text) {
+      if (!text) return '';
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\n/g, '<br>');
+    }
+
     async function checkHealth() {
       try {
         const res = await fetch('/api/health');
@@ -550,11 +740,12 @@
         const aiStatus = document.getElementById('ai-status');
         if (data.services.ai.healthy) {
           aiDot.className = 'badge-dot active';
-          aiStatus.innerText = 'Ollama: ' + (data.services.ai.configuredModel || 'Ready');
-          document.getElementById('ai-model-tag').innerText = data.services.ai.configuredModel;
+          const modelName = data.services.ai.configuredModel || 'Ready';
+          aiStatus.innerText = 'AI: ' + modelName;
+          document.getElementById('ai-model-tag').innerText = modelName;
         } else {
           aiDot.className = 'badge-dot warn';
-          aiStatus.innerText = 'Ollama: Waiting for model...';
+          aiStatus.innerText = 'AI: Starting...';
         }
 
         // DB Status
@@ -565,7 +756,7 @@
           dbStatus.innerText = 'DB: MongoDB';
         } else {
           dbDot.className = 'badge-dot warn';
-          dbStatus.innerText = 'DB: In-Memory Mode';
+          dbStatus.innerText = 'DB: In-Memory';
         }
       } catch (err) {
         console.warn('Health check error:', err);
@@ -586,7 +777,7 @@
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text, userId: 'web_user' })
+          body: JSON.stringify({ message: text, userId: 'maurya_ji' })
         });
         const data = await res.json();
         showTyping(false);
@@ -606,7 +797,7 @@
       const container = document.getElementById('messages-container');
       const msgDiv = document.createElement('div');
       msgDiv.className = 'message ' + sender;
-      msgDiv.innerText = text;
+      msgDiv.innerHTML = formatWhatsAppMarkdown(text);
 
       const meta = document.createElement('div');
       meta.className = 'message-meta';
@@ -637,8 +828,8 @@
     }
 
     async function clearHistory() {
-      if (confirm('Clear current conversation history?')) {
-        await fetch('/api/chat/history?userId=web_user', { method: 'DELETE' });
+      if (confirm('Clear conversation history?')) {
+        await fetch('/api/chat/history?userId=maurya_ji', { method: 'DELETE' });
         const container = document.getElementById('messages-container');
         container.innerHTML = `
           <div class="message assistant">
@@ -685,7 +876,7 @@
           body: JSON.stringify(payload)
         });
         const data = await res.json();
-        resultDiv.innerText = 'Webhook processed! Check server logs for simulated reply.';
+        resultDiv.innerText = 'Webhook delivered! Sent to ' + phone;
       } catch (err) {
         resultDiv.innerText = 'Webhook failed: ' + err.message;
       }
