@@ -1,0 +1,9 @@
+{
+  "name": "whatsapp-ai-assistant",
+  "version": "1.0.0",
+  "description": "WhatsApp AI Assistant powered by Qwen & Google Gemini / Ollama",
+  "scripts": {
+    "build": "cd backend && npm install",
+    "start": "node backend/src/server.js"
+  }
+}
