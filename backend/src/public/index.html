@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp AI Assistant | Local Ollama Powered</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0b141a;
+      --bg-secondary: #111b21;
+      --bg-panel: #202c33;
+      --bg-bubble-user: #005c4b;
+      --bg-bubble-ai: #202c33;
+      --accent-green: #00a884;
+      --accent-green-bright: #25d366;
+      --text-primary: #e9edef;
+      --text-secondary: #8696a0;
+      --border-color: rgba(134, 150, 160, 0.15);
+      --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navigation Header */
+    header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--accent-green), var(--accent-green-bright));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0, 168, 132, 0.3);
+    }
+
+    .brand-icon svg {
+      width: 22px;
+      height: 22px;
+      fill: #fff;
+    }
+
+    .brand h1 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
+    .brand span {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      display: block;
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 500;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #777;
+    }
+
+    .badge-dot.active {
+      background: var(--accent-green-bright);
+      box-shadow: 0 0 8px var(--accent-green-bright);
+    }
+
+    .badge-dot.warn {
+      background: #f59e0b;
+      box-shadow: 0 0 8px #f59e0b;
+    }
+
+    /* Main Container */
+    .container {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 65px);
+      max-width: 1440px;
+      width: 100%;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+
+    /* Left Sidebar: Controls & WhatsApp Simulator */
+    .sidebar {
+      width: 360px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .sidebar-section {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-section h3 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .info-card {
+      background: var(--bg-panel);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      font-size: 0.82rem;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .info-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .info-label {
+      color: var(--text-secondary);
+    }
+
+    .info-value {
+      font-weight: 500;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .form-group input, .form-group textarea {
+      width: 100%;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text-primary);
+      font-family: var(--font-main);
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus, .form-group textarea:focus {
+      border-color: var(--accent-green);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent-green);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #008f6f;
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-outline:hover {
+      background: var(--bg-panel);
+    }
+
+    /* Right Main Panel: Chat Room */
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #0b141a;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    .chat-header {
+      padding: 14px 24px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-header-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--bg-panel);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: var(--accent-green-bright);
+    }
+
+    .messages-container {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .message {
+      max-width: 68%;
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      position: relative;
+      word-break: break-word;
+      animation: fadeIn 0.2s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: var(--bg-bubble-user);
+      border-bottom-right-radius: 2px;
+    }
+
+    .message.assistant {
+      align-self: flex-start;
+      background: var(--bg-bubble-ai);
+      border-bottom-left-radius: 2px;
+      border: 1px solid var(--border-color);
+    }
+
+    .message-meta {
+      font-size: 0.68rem;
+      color: var(--text-secondary);
+      text-align: right;
+      margin-top: 4px;
+    }
+
+    .quick-prompts {
+      padding: 8px 24px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+    }
+
+    .quick-chip {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      padding: 6px 14px;
+      border-radius: 16px;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .quick-chip:hover {
+      border-color: var(--accent-green);
+      color: var(--text-primary);
+      background: var(--bg-panel);
+    }
+
+    .input-bar {
+      padding: 14px 24px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .input-bar input {
+      flex: 1;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      padding: 12px 20px;
+      color: var(--text-primary);
+      font-size: 0.92rem;
+      outline: none;
+    }
+
+    .input-bar input:focus {
+      border-color: var(--accent-green);
+    }
+
+    .send-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .send-btn:hover {
+      background: var(--accent-green-bright);
+    }
+
+    .send-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: #fff;
+    }
+
+    .typing-indicator {
+      display: none;
+      align-self: flex-start;
+      background: var(--bg-bubble-ai);
+      padding: 10px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      gap: 4px;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--text-secondary);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+
+    .dot:nth-child(1) { animation-delay: -0.32s; }
+    .dot:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-5.46-4.45-9.92-9.91-9.92z"/>
+        </svg>
+      </div>
+      <div>
+        <h1>WhatsApp AI Assistant</h1>
+        <span>Free Engine: Ollama Local Inference</span>
+      </div>
+    </div>
+    <div class="status-bar">
+      <div class="badge">
+        <span class="badge-dot" id="db-dot"></span>
+        <span id="db-status">Database: Checking...</span>
+      </div>
+      <div class="badge">
+        <span class="badge-dot" id="ai-dot"></span>
+        <span id="ai-status">Ollama: Connecting...</span>
+      </div>
+      <div class="badge">
+        <span class="badge-dot" id="wa-dot"></span>
+        <span id="wa-status">WhatsApp: Mock Mode</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Left Sidebar: Controls & Simulator -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <h3>System Diagnostics</h3>
+        <div class="info-card">
+          <div class="info-row"><span class="info-label">AI Engine:</span><span class="info-value" id="ai-model-tag">llama3.2:1b</span></div>
+          <div class="info-row"><span class="info-label">Endpoint:</span><span class="info-value">localhost:11434</span></div>
+          <div class="info-row"><span class="info-label">Cost:</span><span class="info-value" style="color:var(--accent-green-bright);">$0.00 (100% Free)</span></div>
+          <div class="info-row"><span class="info-label">Privacy:</span><span class="info-value">100% Local PC</span></div>
+        </div>
+        <button class="btn btn-outline" id="clear-btn" onclick="clearHistory()">Clear Chat History</button>
+      </div>
+
+      <div class="sidebar-section">
+        <h3>WhatsApp Webhook Simulator</h3>
+        <p style="font-size:0.78rem; color:var(--text-secondary); margin-bottom:12px;">
+          Simulate an inbound message from Meta's Cloud API webhook to test the complete end-to-end processing pipeline:
+        </p>
+        <div class="form-group">
+          <label>Sender Phone Number</label>
+          <input type="text" id="sim-phone" value="+15551234567">
+        </div>
+        <div class="form-group">
+          <label>Sender Name</label>
+          <input type="text" id="sim-name" value="Test User">
+        </div>
+        <div class="form-group">
+          <label>Simulated Message</label>
+          <textarea id="sim-msg" rows="3" placeholder="What is binary search?">Explain pointers in C in 2 simple sentences.</textarea>
+        </div>
+        <button class="btn btn-primary" onclick="simulateWhatsAppWebhook()">
+          Send Webhook Event
+        </button>
+        <div id="sim-result" style="margin-top:10px; font-size:0.75rem; color:var(--accent-green-bright);"></div>
+      </div>
+    </div>
+
+    <!-- Right Main Panel: Live Chat -->
+    <div class="chat-area">
+      <div class="chat-header">
+        <div class="chat-header-info">
+          <div class="avatar">AI</div>
+          <div>
+            <div style="font-weight:600; font-size:0.95rem;">WhatsApp Assistant</div>
+            <div style="font-size:0.75rem; color:var(--accent-green-bright);">Online &bull; Free Local Ollama</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="messages-container" id="messages-container">
+        <div class="message assistant">
+          Hello! I'm your local WhatsApp AI assistant powered by free Ollama inference. Send me a message below or trigger a simulated WhatsApp webhook to test!
+          <div class="message-meta">Just now</div>
+        </div>
+      </div>
+
+      <div class="typing-indicator" id="typing-indicator">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
+
+      <div class="quick-prompts">
+        <div class="quick-chip" onclick="quickSend('Explain arrays in C in simple terms')">Array in C</div>
+        <div class="quick-chip" onclick="quickSend('How does a WhatsApp webhook work?')">WhatsApp Webhook</div>
+        <div class="quick-chip" onclick="quickSend('Write a python function to check if a string is a palindrome')">Python Palindrome</div>
+        <div class="quick-chip" onclick="quickSend('What is the difference between SQL and NoSQL?')">SQL vs NoSQL</div>
+      </div>
+
+      <div class="input-bar">
+        <input type="text" id="message-input" placeholder="Type a message to test your AI assistant..." onkeydown="handleKeyDown(event)">
+        <button class="send-btn" id="send-button" onclick="sendMessage()">
+          <svg viewBox="0 0 24 24">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function checkHealth() {
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+        
+        // AI Status
+        const aiDot = document.getElementById('ai-dot');
+        const aiStatus = document.getElementById('ai-status');
+        if (data.services.ai.healthy) {
+          aiDot.className = 'badge-dot active';
+          aiStatus.innerText = 'Ollama: ' + (data.services.ai.configuredModel || 'Ready');
+          document.getElementById('ai-model-tag').innerText = data.services.ai.configuredModel;
+        } else {
+          aiDot.className = 'badge-dot warn';
+          aiStatus.innerText = 'Ollama: Waiting for model...';
+        }
+
+        // DB Status
+        const dbDot = document.getElementById('db-dot');
+        const dbStatus = document.getElementById('db-status');
+        if (data.services.database.connected) {
+          dbDot.className = 'badge-dot active';
+          dbStatus.innerText = 'DB: MongoDB';
+        } else {
+          dbDot.className = 'badge-dot warn';
+          dbStatus.innerText = 'DB: In-Memory Mode';
+        }
+      } catch (err) {
+        console.warn('Health check error:', err);
+      }
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('message-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      appendMessage('user', text);
+      input.value = '';
+
+      showTyping(true);
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, userId: 'web_user' })
+        });
+        const data = await res.json();
+        showTyping(false);
+
+        if (data.success) {
+          appendMessage('assistant', data.reply);
+        } else {
+          appendMessage('assistant', 'Error: ' + (data.error || 'Failed to process message'));
+        }
+      } catch (err) {
+        showTyping(false);
+        appendMessage('assistant', 'Network error connecting to local server.');
+      }
+    }
+
+    function appendMessage(sender, text) {
+      const container = document.getElementById('messages-container');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'message ' + sender;
+      msgDiv.innerText = text;
+
+      const meta = document.createElement('div');
+      meta.className = 'message-meta';
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      meta.innerText = time;
+      msgDiv.appendChild(meta);
+
+      container.appendChild(msgDiv);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function showTyping(show) {
+      const indicator = document.getElementById('typing-indicator');
+      indicator.style.display = show ? 'flex' : 'none';
+      const container = document.getElementById('messages-container');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function quickSend(prompt) {
+      document.getElementById('message-input').value = prompt;
+      sendMessage();
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    }
+
+    async function clearHistory() {
+      if (confirm('Clear current conversation history?')) {
+        await fetch('/api/chat/history?userId=web_user', { method: 'DELETE' });
+        const container = document.getElementById('messages-container');
+        container.innerHTML = `
+          <div class="message assistant">
+            Conversation history cleared. Ready for new questions!
+            <div class="message-meta">Just now</div>
+          </div>
+        `;
+      }
+    }
+
+    async function simulateWhatsAppWebhook() {
+      const phone = document.getElementById('sim-phone').value.trim();
+      const name = document.getElementById('sim-name').value.trim();
+      const msg = document.getElementById('sim-msg').value.trim();
+      const resultDiv = document.getElementById('sim-result');
+
+      resultDiv.innerText = 'Delivering webhook event...';
+
+      const payload = {
+        object: 'whatsapp_business_account',
+        entry: [{
+          id: 'WHATSAPP_ID',
+          changes: [{
+            field: 'messages',
+            value: {
+              messaging_product: 'whatsapp',
+              contacts: [{ wa_id: phone.replace(/[^0-9]/g, ''), profile: { name: name } }],
+              messages: [{
+                from: phone.replace(/[^0-9]/g, ''),
+                id: 'wamid.' + Math.random().toString(36).substring(2, 15),
+                timestamp: Math.floor(Date.now() / 1000).toString(),
+                text: { body: msg },
+                type: 'text'
+              }]
+            }
+          }]
+        }]
+      };
+
+      try {
+        const res = await fetch('/webhook', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        resultDiv.innerText = 'Webhook processed! Check server logs for simulated reply.';
+      } catch (err) {
+        resultDiv.innerText = 'Webhook failed: ' + err.message;
+      }
+    }
+
+    // Initial load
+    checkHealth();
+    setInterval(checkHealth, 5000);
+  </script>
+</body>
+</html>
