@@ -12,37 +12,22 @@ Format all responses specifically for mobile WhatsApp reading:
 
 let resolvedGeminiModel = null;
 
-async function discoverActiveGeminiModel() {
-  try {
-    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${config.ai.geminiApiKey}`);
-    if (listRes.ok) {
-      const data = await listRes.json();
-      const flashModel = data.models?.find(m =>
-        m.supportedGenerationMethods?.includes('generateContent') &&
-        (m.name.includes('flash') || m.name.includes('gemini'))
-      );
-      if (flashModel) {
-        const cleanName = flashModel.name.replace(/^models\//, '');
-        console.log(`[Gemini] Discovered supported active model: ${cleanName}`);
-        resolvedGeminiModel = cleanName;
-        return cleanName;
-      }
-    }
-  } catch (err) {
-    console.warn('[Gemini] Model auto-discovery failed:', err.message);
-  }
-  return 'gemini-3.5-flash';
-}
+// Free-tier resilient waterfall: lite models have much higher daily request quotas
+const FREE_TIER_MODELS = [
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-3.5-flash',
+];
 
 /**
- * Calls Google Gemini REST API (fast cloud free tier)
+ * Calls Google Gemini REST API (fast cloud free tier with auto-fallback on 429 quota exhaustion)
  */
 async function generateGeminiReply(history, prompt, customSystemPrompt) {
-  let model = resolvedGeminiModel || config.ai.geminiModel || 'gemini-3.5-flash';
-  // Avoid deprecated 1.5 or 2.5 strings if legacy value was configured
-  if (model === 'gemini-1.5-flash' || model === 'gemini-2.5-flash') {
-    model = 'gemini-3.5-flash';
-  }
+  const preferredModel = resolvedGeminiModel || config.ai.geminiModel || 'gemini-3.5-flash-lite';
+  const candidateModels = [
+    preferredModel,
+    ...FREE_TIER_MODELS,
+  ].filter((m, i, arr) => m && arr.indexOf(m) === i && !m.includes('1.5') && !m.includes('2.5') && m !== 'gemini-3.6-flash');
 
   // Map history to Gemini format (user -> "user", assistant -> "model")
   const contents = [];
@@ -57,47 +42,61 @@ async function generateGeminiReply(history, prompt, customSystemPrompt) {
     parts: [{ text: prompt }],
   });
 
-  const body = {
-    system_instruction: {
-      parts: [{ text: customSystemPrompt || SYSTEM_PROMPT }],
-    },
-    contents,
-    generationConfig: {
+  const makeBody = (modelName) => {
+    const generationConfig = {
       maxOutputTokens: 2048,
       temperature: 0.7,
-      thinkingConfig: {
-        thinkingBudget: 0, // Disables thinking tokens so answers are never cut off
+    };
+    // Lite models do not support thinkingConfig; standard flash models need thinkingBudget: 0 to prevent cutoff
+    if (!modelName.includes('lite') && !modelName.includes('gemma')) {
+      generationConfig.thinkingConfig = { thinkingBudget: 0 };
+    }
+
+    return {
+      system_instruction: {
+        parts: [{ text: customSystemPrompt || SYSTEM_PROMPT }],
       },
-    },
+      contents,
+      generationConfig,
+    };
   };
 
-  const makeRequest = async (modelName) => {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${config.ai.geminiApiKey}`;
-    return await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-  };
+  let lastError = null;
 
-  let response = await makeRequest(model);
+  for (const modelName of candidateModels) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${config.ai.geminiApiKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(makeBody(modelName)),
+      });
 
-  // If 404 (model name changed or unsupported on current tier), discover supported model and retry once!
-  if (response.status === 404) {
-    console.warn(`[Gemini] Model ${model} returned 404. Finding active model for your API key...`);
-    model = await discoverActiveGeminiModel();
-    response = await makeRequest(model);
+      if (response.ok) {
+        resolvedGeminiModel = modelName;
+        const data = await response.json();
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        const reply = parts.map(p => p.text).filter(Boolean).join('\n');
+        if (reply?.trim()) return reply.trim();
+      }
+
+      const errText = await response.text();
+      console.warn(`[Gemini] Model ${modelName} returned ${response.status}: ${errText.slice(0, 140)}`);
+      lastError = new Error(`Gemini API error (${response.status}) on ${modelName}: ${errText}`);
+
+      // If quota exceeded (429), model unsupported/deprecated (404), or busy (503), try next free model
+      if (![429, 404, 503].includes(response.status)) {
+        throw lastError;
+      }
+    } catch (err) {
+      lastError = err;
+      if (err.message?.includes('Gemini API error') && ![429, 404, 503].some(code => err.message.includes(`(${code})`))) {
+        throw err;
+      }
+    }
   }
 
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Gemini API error (${response.status}): ${errText}`);
-  }
-
-  const data = await response.json();
-  const parts = data.candidates?.[0]?.content?.parts || [];
-  const reply = parts.map(p => p.text).filter(Boolean).join('\n');
-  return reply?.trim() || 'No response generated.';
+  throw lastError || new Error('All free Gemini models exhausted or unavailable.');
 }
 
 /**
@@ -146,7 +145,16 @@ export async function generateAiReply(history = [], prompt, customSystemPrompt =
 
   // Use Gemini if API key is configured or provider is gemini
   if (config.ai.geminiApiKey) {
-    return await generateGeminiReply(history, prompt, customSystemPrompt);
+    try {
+      return await generateGeminiReply(history, prompt, customSystemPrompt);
+    } catch (geminiErr) {
+      console.warn('[AI] Gemini models unavailable, attempting Ollama fallback:', geminiErr.message);
+      try {
+        return await generateOllamaReply(history, prompt, customSystemPrompt);
+      } catch {
+        throw geminiErr;
+      }
+    }
   }
 
   // Fallback to local Ollama
