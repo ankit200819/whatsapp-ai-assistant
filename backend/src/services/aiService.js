@@ -63,8 +63,11 @@ async function generateGeminiReply(history, prompt, customSystemPrompt) {
     },
     contents,
     generationConfig: {
-      maxOutputTokens: 250,
+      maxOutputTokens: 2048,
       temperature: 0.7,
+      thinkingConfig: {
+        thinkingBudget: 0, // Disables thinking tokens so answers are never cut off
+      },
     },
   };
 
@@ -92,7 +95,8 @@ async function generateGeminiReply(history, prompt, customSystemPrompt) {
   }
 
   const data = await response.json();
-  const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  const reply = parts.map(p => p.text).filter(Boolean).join('\n');
   return reply?.trim() || 'No response generated.';
 }
 
