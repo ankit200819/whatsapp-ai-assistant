@@ -10,12 +10,39 @@ Format all responses specifically for mobile WhatsApp reading:
 - Use bullet points with clean spacing so it's easy to skim on mobile.
 - Avoid large text walls.`;
 
+let resolvedGeminiModel = null;
+
+async function discoverActiveGeminiModel() {
+  try {
+    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${config.ai.geminiApiKey}`);
+    if (listRes.ok) {
+      const data = await listRes.json();
+      const flashModel = data.models?.find(m =>
+        m.supportedGenerationMethods?.includes('generateContent') &&
+        (m.name.includes('flash') || m.name.includes('gemini'))
+      );
+      if (flashModel) {
+        const cleanName = flashModel.name.replace(/^models\//, '');
+        console.log(`[Gemini] Discovered supported active model: ${cleanName}`);
+        resolvedGeminiModel = cleanName;
+        return cleanName;
+      }
+    }
+  } catch (err) {
+    console.warn('[Gemini] Model auto-discovery failed:', err.message);
+  }
+  return 'gemini-3.5-flash';
+}
+
 /**
  * Calls Google Gemini REST API (fast cloud free tier)
  */
 async function generateGeminiReply(history, prompt, customSystemPrompt) {
-  const model = config.ai.geminiModel || 'gemini-1.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.ai.geminiApiKey}`;
+  let model = resolvedGeminiModel || config.ai.geminiModel || 'gemini-3.5-flash';
+  // Avoid deprecated 1.5 or 2.5 strings if legacy value was configured
+  if (model === 'gemini-1.5-flash' || model === 'gemini-2.5-flash') {
+    model = 'gemini-3.5-flash';
+  }
 
   // Map history to Gemini format (user -> "user", assistant -> "model")
   const contents = [];
@@ -41,11 +68,23 @@ async function generateGeminiReply(history, prompt, customSystemPrompt) {
     },
   };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  const makeRequest = async (modelName) => {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${config.ai.geminiApiKey}`;
+    return await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  };
+
+  let response = await makeRequest(model);
+
+  // If 404 (model name changed or unsupported on current tier), discover supported model and retry once!
+  if (response.status === 404) {
+    console.warn(`[Gemini] Model ${model} returned 404. Finding active model for your API key...`);
+    model = await discoverActiveGeminiModel();
+    response = await makeRequest(model);
+  }
 
   if (!response.ok) {
     const errText = await response.text();
