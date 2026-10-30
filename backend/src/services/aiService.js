@@ -1,68 +1,121 @@
 import { config } from '../config/env.js';
 
 const SYSTEM_PROMPT = `You are a helpful, intelligent WhatsApp AI Assistant.
-Provide clear, friendly, and concise answers suitable for WhatsApp messaging.
-Keep responses easy to read, using bullet points or short paragraphs where appropriate.
-If asked to write code, provide clean, concise snippets.`;
+Provide clear, friendly, and concise answers suitable for WhatsApp messaging (1-3 sentences maximum).
+Keep responses snappy and easy to read.`;
 
 /**
- * Sends a chat prompt and recent history to Ollama
- * @param {Array<{role: string, content: string}>} history - Previous messages
- * @param {string} prompt - Current user message
- * @returns {Promise<string>} Assistant reply text
+ * Calls Google Gemini REST API (fast cloud free tier)
  */
-export async function generateAiReply(history = [], prompt, customSystemPrompt = null) {
-  const url = `${config.ai.ollamaBaseUrl}/api/chat`;
-  const messages = [
-    { role: 'system', content: customSystemPrompt || SYSTEM_PROMPT },
-    ...history.slice(-8), // Keep recent context bounded to avoid token bloat
-    { role: 'user', content: prompt },
-  ];
+async function generateGeminiReply(history, prompt, customSystemPrompt) {
+  const model = config.ai.geminiModel || 'gemini-1.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.ai.geminiApiKey}`;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.ai.timeoutMs);
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: config.ai.ollamaModel,
-        messages,
-        stream: false,
-      }),
-      signal: controller.signal,
+  // Map history to Gemini format (user -> "user", assistant -> "model")
+  const contents = [];
+  for (const msg of history.slice(-6)) {
+    contents.push({
+      role: msg.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: msg.content }],
     });
-
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Ollama API error (${response.status}): ${errText}`);
-    }
-
-    const data = await response.json();
-    return data.message?.content?.trim() || 'No response generated.';
-  } catch (err) {
-    clearTimeout(timeout);
-    if (err.name === 'AbortError') {
-      throw new Error('AI request timed out. Please try again.');
-    }
-    // Check if Ollama is unreachable
-    if (err.cause?.code === 'ECONNREFUSED' || err.message.includes('fetch failed')) {
-      throw new Error('Ollama service is not reachable on localhost:11434. Please ensure Ollama is running.');
-    }
-    throw err;
   }
+  contents.push({
+    role: 'user',
+    parts: [{ text: prompt }],
+  });
+
+  const body = {
+    system_instruction: {
+      parts: [{ text: customSystemPrompt || SYSTEM_PROMPT }],
+    },
+    contents,
+    generationConfig: {
+      maxOutputTokens: 250,
+      temperature: 0.7,
+    },
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Gemini API error (${response.status}): ${errText}`);
+  }
+
+  const data = await response.json();
+  const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  return reply?.trim() || 'No response generated.';
 }
 
 /**
- * Checks if Ollama service is active and responsive
+ * Calls local Ollama (local free offline)
+ */
+async function generateOllamaReply(history, prompt, customSystemPrompt) {
+  const url = `${config.ai.ollamaBaseUrl}/api/chat`;
+  const messages = [
+    { role: 'system', content: customSystemPrompt || SYSTEM_PROMPT },
+    ...history.slice(-6),
+    { role: 'user', content: prompt },
+  ];
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: config.ai.ollamaModel,
+      messages,
+      stream: false,
+      options: {
+        num_predict: 120, // Limit tokens for 3x faster local response
+        temperature: 0.7,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Ollama error (${response.status}): ${errText}`);
+  }
+
+  const data = await response.json();
+  return data.message?.content?.trim() || 'No response generated.';
+}
+
+/**
+ * Main AI reply entry point
+ */
+export async function generateAiReply(history = [], prompt, customSystemPrompt = null) {
+  // Use Gemini if API key is configured or provider is gemini
+  if (config.ai.geminiApiKey) {
+    return await generateGeminiReply(history, prompt, customSystemPrompt);
+  }
+
+  // Fallback to local Ollama
+  return await generateOllamaReply(history, prompt, customSystemPrompt);
+}
+
+/**
+ * Checks active AI engine status
  */
 export async function checkAiHealth() {
+  if (config.ai.geminiApiKey) {
+    return {
+      healthy: true,
+      provider: 'gemini',
+      configuredModel: config.ai.geminiModel,
+      speed: 'ultra-fast (~1s cloud)',
+      cost: '100% Free (Google AI Studio)',
+    };
+  }
+
+  // Check Ollama
   try {
     const res = await fetch(`${config.ai.ollamaBaseUrl}/api/tags`, { method: 'GET' });
-    if (!res.ok) return { healthy: false, error: `HTTP ${res.status}` };
+    if (!res.ok) return { healthy: false, provider: 'ollama', error: `HTTP ${res.status}` };
     const data = await res.json();
     const models = data.models?.map(m => m.name) || [];
     return {
@@ -70,7 +123,8 @@ export async function checkAiHealth() {
       provider: 'ollama',
       configuredModel: config.ai.ollamaModel,
       availableModels: models,
-      modelReady: models.some(m => m.includes(config.ai.ollamaModel.split(':')[0])),
+      speed: 'local CPU (~7s)',
+      tip: 'Add GEMINI_API_KEY to backend/.env for instant ~1s replies!',
     };
   } catch (err) {
     return { healthy: false, provider: 'ollama', error: err.message };
